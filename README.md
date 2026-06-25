@@ -122,13 +122,13 @@ git init
 git add .
 git commit -m "Initial commit of Go itunespull"
 git branch -M main
-git remote add origin https://github.com/YOUR_GITHUB_USERNAME/itunespull.git
+git remote add origin https://github.com/DrewThomasson/itunespull.git
 git push -u origin main
 ```
 
 ### Step 3: Configure GoReleaser
 1. Open the file `.goreleaser.yaml` in this folder.
-2. Replace `YOUR_GITHUB_USERNAME` with your actual GitHub username in both the `brews` repository block and the `homepage` URL.
+2. Verify that it is pre-configured with your actual GitHub username (`DrewThomasson`) in both the `brews` repository block and the `homepage` URL.
 
 ### Step 4: Run GoReleaser to Publish
 1. Generate a **GitHub Personal Access Token (classic)** with `repo` scope from your GitHub settings.
@@ -149,6 +149,6 @@ git push -u origin main
 
 Once completed, anyone can install the tool on Mac or Linux with:
 ```bash
-brew tap YOUR_GITHUB_USERNAME/tap
+brew tap DrewThomasson/homebrew-tap
 brew install itunespull
 ```
