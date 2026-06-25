@@ -19,6 +19,25 @@ This Go-based edition replaces the legacy Python script with a single compiled b
 
 ---
 
+## Installation
+
+To install `itunespull` on macOS or Linux, use **Homebrew**:
+
+```bash
+# 1. Tap the repository
+brew tap DrewThomasson/homebrew-tap
+
+# 2. Install itunespull
+brew install itunespull
+```
+
+*Note:* Streaming audio locally requires `mpv` to be installed on your client machine:
+```bash
+brew install mpv
+```
+
+---
+
 ## TUI Controls
 
 * **Navigation:**
@@ -106,49 +125,22 @@ This Go-based edition replaces the legacy Python script with a single compiled b
 
 ---
 
-## How to Publish to GitHub & Homebrew
+## Re-releasing New Versions (For Developers)
 
-To distribute this program so you (or others) can install it via `brew install`:
+To release a new version of the app to your Homebrew tap:
 
-### Step 1: Create GitHub Repositories
-Create two empty repositories on your GitHub account:
-1. `itunespull` (for the code)
-2. `homebrew-tap` (for the Homebrew formula recipes)
-
-### Step 2: Push the Code
-In your local `~/itunespull` directory, run:
-```bash
-git init
-git add .
-git commit -m "Initial commit of Go itunespull"
-git branch -M main
-git remote add origin https://github.com/DrewThomasson/itunespull.git
-git push -u origin main
-```
-
-### Step 3: Configure GoReleaser
-1. Open the file `.goreleaser.yaml` in this folder.
-2. Verify that it is pre-configured with your actual GitHub username (`DrewThomasson`) in both the `brews` repository block and the `homepage` URL.
-
-### Step 4: Run GoReleaser to Publish
-1. Generate a **GitHub Personal Access Token (classic)** with `repo` scope from your GitHub settings.
-2. Export the token on your terminal:
+1. Commit and push your local modifications to GitHub:
    ```bash
-   export GITHUB_TOKEN="your_personal_access_token_here"
+   git add .
+   git commit -m "Describe your changes"
+   git push origin main
    ```
-3. Tag your code version:
+2. Create and push a new git tag (incrementing the version number, e.g. from `v1.0.0` to `v1.0.1`):
    ```bash
-   git tag -a v1.0.0 -m "First release"
-   git push origin v1.0.0
+   git tag -a v1.0.1 -m "Version v1.0.1"
+   git push origin v1.0.1
    ```
-4. Run GoReleaser to compile and publish:
+3. Run GoReleaser (ensure `GITHUB_TOKEN` environment variable is exported in your terminal session):
    ```bash
-   # Install goreleaser if you don't have it: brew install goreleaser
    goreleaser release --clean
    ```
-
-Once completed, anyone can install the tool on Mac or Linux with:
-```bash
-brew tap DrewThomasson/homebrew-tap
-brew install itunespull
-```
