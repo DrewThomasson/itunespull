@@ -1,10 +1,13 @@
-# itunespull (Go Edition)
+# itunespull
 
 `itunespull` is a command-line terminal player and downloader that allows you to stream and download music from a remote Mac running iTunes or Apple Music over an SSH connection.
 
 This Go-based edition replaces the legacy Python script with a single compiled binary, featuring an interactive split-pane terminal UI built using the **Bubble Tea** framework.
 
 ---
+
+<img width="1541" height="1232" alt="demo" src="https://github.com/user-attachments/assets/10163344-a8bf-47b8-864a-4b4dd77932ad" />
+
 
 ## Features
 
