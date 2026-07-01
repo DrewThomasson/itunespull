@@ -31,12 +31,7 @@ To install `itunespull` on macOS or Linux, use **Homebrew**:
 brew tap DrewThomasson/homebrew-tap
 
 # 2. Install itunespull
-brew install itunespull
-```
-
-*Note:* Streaming audio locally requires `mpv` to be installed on your client machine:
-```bash
-brew install mpv
+brew install itunespull mpv
 ```
 
 ---
