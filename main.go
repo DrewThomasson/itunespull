@@ -181,7 +181,7 @@ func runDownloadCLI(cfg *Config, controlPath string, activeApp string, destDir s
 		}
 
 		if len(tracks) == 0 {
-			fmt.Println("❌ No matching local files found in remote library.\n")
+			fmt.Print("❌ No matching local files found in remote library.\n\n")
 			continue
 		}
 
@@ -219,13 +219,13 @@ func runDownloadCLI(cfg *Config, controlPath string, activeApp string, destDir s
 
 		selectedIndices := parseSelections(selectionInput, len(tracks))
 		if len(selectedIndices) == 0 {
-			fmt.Println("⚠️  Invalid selection. Try again.\n")
+			fmt.Print("⚠️  Invalid selection. Try again.\n\n")
 			continue
 		}
 
 		if isStream {
 			if !hasMpv {
-				fmt.Println("❌ Error: mpv is not installed or not found in your PATH. Cannot stream.\n")
+				fmt.Print("❌ Error: mpv is not installed or not found in your PATH. Cannot stream.\n\n")
 				continue
 			}
 
@@ -242,7 +242,7 @@ func runDownloadCLI(cfg *Config, controlPath string, activeApp string, destDir s
 				fmt.Printf("\n▶️  [%d/%d] Playing: \x1b[92m%s - %s\x1b[0m (Album: %s)\n", i+1, len(selectedIndices), track.Artist, track.Title, track.Album)
 
 				escapedPath := strings.ReplaceAll(strings.ReplaceAll(track.Path, "\\", "\\\\"), "\"", "\\\"")
-				
+
 				sshCmd := exec.Command("ssh", "-o", "ControlPath="+controlPath, target, fmt.Sprintf(`cat "%s"`, escapedPath))
 				var mpvArgs []string
 				if !cfg.VideoEnabled {
@@ -265,16 +265,16 @@ func runDownloadCLI(cfg *Config, controlPath string, activeApp string, destDir s
 
 				// Wait for mpv to finish playing (or user to Ctrl+C)
 				mpvCmd.Wait()
-				
+
 				// Kill SSH if mpv stopped first
 				if sshCmd.Process != nil {
 					sshCmd.Process.Kill()
 				}
 			}
-			fmt.Println("\n🎉 Playlist complete!\n")
+			fmt.Print("\n🎉 Playlist complete!\n\n")
 		} else {
 			fmt.Printf("\n🚀 Downloading %d song(s) to '%s'...\n", len(selectedIndices), destDir)
-			
+
 			var selectedTracks []Track
 			for _, idx := range selectedIndices {
 				selectedTracks = append(selectedTracks, tracks[idx-1])
@@ -290,7 +290,7 @@ func runDownloadCLI(cfg *Config, controlPath string, activeApp string, destDir s
 					fmt.Printf(" [%d/%d] Downloading: %s ... ", count, len(selectedIndices), name)
 				}
 			})
-			fmt.Println("\n🎉 Downloads complete!\n")
+			fmt.Print("\n🎉 Downloads complete!\n\n")
 		}
 	}
 }

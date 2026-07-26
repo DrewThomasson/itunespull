@@ -15,6 +15,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const (
+	sidebarContentWidth = 19
+	sidebarPaneWidth    = sidebarContentWidth + 1 // trailing space before the divider
+)
+
+var version = "1.0.1"
+
 type Theme struct {
 	Name           string
 	HeaderColor    string
@@ -82,54 +89,54 @@ var themes = []Theme{
 type tickMsg struct{}
 
 type model struct {
-	cfg               *Config
-	controlPath       string
-	activeApp         string
-	library           *Library
-	pm                *PlaybackManager
-	
-	focus             string // "left" or "right"
-	sidebarIdx        int
-	playlistsList     []string
-	artistsList       []string
-	albumsList        []string
-	
+	cfg         *Config
+	controlPath string
+	activeApp   string
+	library     *Library
+	pm          *PlaybackManager
+
+	focus         string // "left" or "right"
+	sidebarIdx    int
+	playlistsList []string
+	artistsList   []string
+	albumsList    []string
+
 	rightIdx          int
 	rightScrollOffset int
 	rightPaneState    string // "playlists", "artists", "albums", "all_songs", "playlist_tracks", "artist_tracks", "album_tracks", "search"
-	
-	selectedPlaylist  string
-	selectedArtist    string
-	selectedAlbum     string
-	
-	playlistTracks    []Track
-	artistTracks      []Track
-	albumTracks       []Track
-	filteredTracks    []Track
-	allSongsTracks    []Track
-	sortMode          string // "default", "title", "artist", "rating", "play_count"
-	showSortPrompt    bool
-	showLyrics        bool
-	showVisualizer    bool
-	autoScroll        bool
+
+	selectedPlaylist string
+	selectedArtist   string
+	selectedAlbum    string
+
+	playlistTracks     []Track
+	artistTracks       []Track
+	albumTracks        []Track
+	filteredTracks     []Track
+	allSongsTracks     []Track
+	sortMode           string // "default", "title", "artist", "rating", "play_count"
+	showSortPrompt     bool
+	showLyrics         bool
+	showVisualizer     bool
+	autoScroll         bool
 	lyricsScrollOffset int
-	
-	searchQuery       string
-	isSearching       bool
-	rateNotifyTime    time.Time
-	themeIdx          int
-	themeNotifyTime   time.Time
-	showInfoCard      bool
-	
+
+	searchQuery     string
+	isSearching     bool
+	rateNotifyTime  time.Time
+	themeIdx        int
+	themeNotifyTime time.Time
+	showInfoCard    bool
+
 	downloadingTrack   string
 	downloadStatus     string // "", "downloading", "success", "error"
 	downloadNotifyTime time.Time
-	
-	width             int
-	height            int
-	rebuildingCache   bool
-	lastTrackDBID     int
-	err               error
+
+	width           int
+	height          int
+	rebuildingCache bool
+	lastTrackDBID   int
+	err             error
 }
 
 func initialModel(cfg *Config, controlPath string, activeApp string, lib *Library) model {
@@ -166,22 +173,22 @@ func initialModel(cfg *Config, controlPath string, activeApp string, lib *Librar
 	sort.Strings(albums)
 
 	m := model{
-		cfg:             cfg,
-		controlPath:     controlPath,
-		activeApp:       activeApp,
-		library:         lib,
-		allSongsTracks:  append([]Track(nil), lib.Tracks...),
-		sortMode:        "default",
-		pm:              pm,
-		focus:           "left",
-		sidebarIdx:      0,
-		playlistsList:   playlists,
-		artistsList:     artists,
-		albumsList:      albums,
-		rightPaneState:  "playlists",
-		showVisualizer:  true,
-		autoScroll:      true,
-		themeIdx:        0,
+		cfg:            cfg,
+		controlPath:    controlPath,
+		activeApp:      activeApp,
+		library:        lib,
+		allSongsTracks: append([]Track(nil), lib.Tracks...),
+		sortMode:       "default",
+		pm:             pm,
+		focus:          "left",
+		sidebarIdx:     0,
+		playlistsList:  playlists,
+		artistsList:    artists,
+		albumsList:     albums,
+		rightPaneState: "playlists",
+		showVisualizer: true,
+		autoScroll:     true,
+		themeIdx:       0,
 	}
 
 	// Set up callback for when track ends to refresh UI state
@@ -231,7 +238,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lyricsScrollOffset = 0
 			m.autoScroll = true
 		}
-		
+
 		if m.autoScroll && m.showLyrics && durVal > 0 {
 			m.pm.mu.Lock()
 			lyricsText := m.pm.CurrentLyrics
@@ -250,7 +257,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-		
+
 		tickDuration := 500 * time.Millisecond
 		if m.showVisualizer && isPlaying {
 			tickDuration = 120 * time.Millisecond
@@ -983,11 +990,12 @@ func (m model) View() string {
 
 	// 1. Header Row
 	headerStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(theme.HeaderColor)).Bold(true)
-	headerText := "itunespull v1.0.0 (Go)"
+	headerText := fmt.Sprintf("itunespull v%s (Go)", version)
 	statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(theme.EqualizerColor))
 	statusText := fmt.Sprintf("🟢 Connected to Mac (%s)", m.activeApp)
-	
-	header := fmt.Sprintf("%s%s%s\n", headerStyle.Render(headerText), strings.Repeat(" ", max(0, m.width-len(headerText)-len(statusText))), statusStyle.Render(statusText))
+
+	headerPadding := max(0, m.width-lipgloss.Width(headerText)-lipgloss.Width(statusText))
+	header := fmt.Sprintf("%s%s%s\n", headerStyle.Render(headerText), strings.Repeat(" ", headerPadding), statusStyle.Render(statusText))
 	separator := lipgloss.NewStyle().Foreground(lipgloss.Color(theme.BorderColor)).Render(strings.Repeat("─", m.width)) + "\n"
 
 	// Calculations for list sizing
@@ -1015,15 +1023,11 @@ func (m model) View() string {
 		} else {
 			style = lipgloss.NewStyle()
 		}
-		itemText := fmt.Sprintf(" %-18s", item)
-		if len(itemText) > 19 {
-			itemText = itemText[:19]
-		}
-		sidebarLines = append(sidebarLines, style.Render(itemText))
+		sidebarLines = append(sidebarLines, style.Width(sidebarContentWidth).MaxWidth(sidebarContentWidth).Render(" "+item))
 	}
 	// Pad sidebar to fill height
 	for len(sidebarLines) < listHeight {
-		sidebarLines = append(sidebarLines, strings.Repeat(" ", 19))
+		sidebarLines = append(sidebarLines, strings.Repeat(" ", sidebarContentWidth))
 	}
 
 	// 3. Right Pane Layout
@@ -1039,7 +1043,7 @@ func (m model) View() string {
 
 		if curTrack != nil {
 			headerTitle = fmt.Sprintf("🎵 Lyrics: %s - %s", curTrack.Title, curTrack.Artist)
-			
+
 			lyricsLines := strings.Split(lyricsRaw, "\n")
 			var artLines []string
 			if artworkRaw != "" {
@@ -1086,13 +1090,13 @@ func (m model) View() string {
 					if i < len(artLines) {
 						artLine = fmt.Sprintf("%-25s", artLines[i])
 					}
-					
+
 					lyricLine := ""
 					lyricIdx := i + m.lyricsScrollOffset
 					if lyricIdx >= 0 && lyricIdx < len(lyricsLines) {
 						lyricLine = lyricsLines[lyricIdx]
 					}
-					
+
 					// Trim lyric line if it's too long
 					maxLyricWidth := rightWidth - 29
 					if maxLyricWidth < 10 {
@@ -1101,7 +1105,7 @@ func (m model) View() string {
 					if len(lyricLine) > maxLyricWidth {
 						lyricLine = lyricLine[:maxLyricWidth-3] + "..."
 					}
-					
+
 					line = fmt.Sprintf("%s │ %s", artLine, lyricLine)
 				} else {
 					// Lyrics only
@@ -1123,26 +1127,42 @@ func (m model) View() string {
 		var t *Track
 		switch m.rightPaneState {
 		case "all_songs":
-			if m.rightIdx < len(m.allSongsTracks) { t = &m.allSongsTracks[m.rightIdx] }
+			if m.rightIdx < len(m.allSongsTracks) {
+				t = &m.allSongsTracks[m.rightIdx]
+			}
 		case "playlist_tracks":
-			if m.rightIdx < len(m.playlistTracks) { t = &m.playlistTracks[m.rightIdx] }
+			if m.rightIdx < len(m.playlistTracks) {
+				t = &m.playlistTracks[m.rightIdx]
+			}
 		case "artist_tracks":
-			if m.rightIdx < len(m.artistTracks) { t = &m.artistTracks[m.rightIdx] }
+			if m.rightIdx < len(m.artistTracks) {
+				t = &m.artistTracks[m.rightIdx]
+			}
 		case "album_tracks":
-			if m.rightIdx < len(m.albumTracks) { t = &m.albumTracks[m.rightIdx] }
+			if m.rightIdx < len(m.albumTracks) {
+				t = &m.albumTracks[m.rightIdx]
+			}
 		case "search":
-			if m.rightIdx < len(m.filteredTracks) { t = &m.filteredTracks[m.rightIdx] }
+			if m.rightIdx < len(m.filteredTracks) {
+				t = &m.filteredTracks[m.rightIdx]
+			}
 		}
 
 		if t != nil {
 			filledStars := t.Rating / 20
 			stars := strings.Repeat("★", filledStars) + strings.Repeat("☆", 5-filledStars)
 			genreStr := t.Genre
-			if genreStr == "" { genreStr = "Unknown" }
+			if genreStr == "" {
+				genreStr = "Unknown"
+			}
 			yearStr := strconv.Itoa(t.Year)
-			if t.Year == 0 { yearStr = "Unknown" }
+			if t.Year == 0 {
+				yearStr = "Unknown"
+			}
 			trackNumStr := strconv.Itoa(t.TrackNumber)
-			if t.TrackNumber == 0 { trackNumStr = "Unknown" }
+			if t.TrackNumber == 0 {
+				trackNumStr = "Unknown"
+			}
 
 			details := []string{
 				"",
@@ -1256,14 +1276,16 @@ func (m model) View() string {
 			rightHeader = lipgloss.NewStyle().Foreground(lipgloss.Color(theme.MutedColor)).Bold(true).Render("❌ Download failed!")
 		}
 	}
-	
+
 	var paneRows []string
-	rightWidth := m.width - 20
+	rightWidth := m.width - sidebarPaneWidth - 1
 	if rightWidth < 0 {
 		rightWidth = 0
 	}
-	paneRows = append(paneRows, fmt.Sprintf(" %-19s│ %s", "", rightHeader))
-	borderLine := lipgloss.NewStyle().Foreground(lipgloss.Color(theme.BorderColor)).Render(fmt.Sprintf("───────────────────┼%s", strings.Repeat("─", rightWidth)))
+	paneRows = append(paneRows, strings.Repeat(" ", sidebarPaneWidth)+"│ "+rightHeader)
+	borderLine := lipgloss.NewStyle().Foreground(lipgloss.Color(theme.BorderColor)).Render(
+		strings.Repeat("─", sidebarPaneWidth) + "┼" + strings.Repeat("─", rightWidth),
+	)
 	paneRows = append(paneRows, borderLine)
 
 	for i := 0; i < listHeight; i++ {
@@ -1272,14 +1294,14 @@ func (m model) View() string {
 		if i < len(rightLines) {
 			rightCell = rightLines[i]
 		}
-		paneRows = append(paneRows, fmt.Sprintf("%-19s │ %s", sidebarCell, rightCell))
+		paneRows = append(paneRows, sidebarCell+" │ "+rightCell)
 	}
 
 	contentView := strings.Join(paneRows, "\n") + "\n"
 
 	// 4. Playbar (Progress & Status)
 	playbarSep := lipgloss.NewStyle().Foreground(lipgloss.Color(theme.BorderColor)).Render(strings.Repeat("─", m.width)) + "\n"
-	
+
 	var playbarRow1, playbarRow2 string
 	m.pm.mu.Lock()
 	track := m.pm.CurrentTrack
@@ -1293,9 +1315,9 @@ func (m model) View() string {
 	if track != nil {
 		filledStars := track.Rating / 20
 		stars := strings.Repeat("★", filledStars) + strings.Repeat("☆", 5-filledStars)
-		
+
 		trackInfo := fmt.Sprintf("Now Playing: %s - %s", track.Title, track.Artist)
-		
+
 		repeatBadge := ""
 		if m.pm.RepeatMode == "one" {
 			repeatBadge = " [🔂 One]"
@@ -1307,7 +1329,7 @@ func (m model) View() string {
 			shuffleBadge = " [🔀 Shuffle]"
 		}
 		ratingText := fmt.Sprintf("[%s]%s%s", stars, repeatBadge, shuffleBadge)
-		
+
 		maxTrackInfoWidth := m.width - len(ratingText) - 5
 		if m.showVisualizer {
 			maxTrackInfoWidth -= 8 // space for compact visualizer
@@ -1315,7 +1337,7 @@ func (m model) View() string {
 		if len(trackInfo) > maxTrackInfoWidth {
 			trackInfo = trackInfo[:maxTrackInfoWidth] + "..."
 		}
-		
+
 		visualWidth := lipgloss.Width(trackInfo)
 		if m.showVisualizer {
 			visualWidth += 8 // "  " + 6-char visualizer
@@ -1324,7 +1346,7 @@ func (m model) View() string {
 		if padding < 0 {
 			padding = 0
 		}
-		
+
 		playbarRow1 = lipgloss.NewStyle().Foreground(lipgloss.Color(theme.InfoColor)).Bold(true).Render(trackInfo)
 		if m.showVisualizer {
 			playbarRow1 += "  " + m.getCompactEqualizer()
@@ -1334,7 +1356,7 @@ func (m model) View() string {
 
 		posStr := formatTime(posVal)
 		durStr := formatTime(durVal)
-		
+
 		volBar := ""
 		if isMuted {
 			volBar = "░░░░░░░░░░"
@@ -1348,14 +1370,14 @@ func (m model) View() string {
 			}
 			volBar = strings.Repeat("█", filledVol) + strings.Repeat("░", 10-filledVol)
 		}
-		
+
 		var volText string
 		if isMuted {
 			volText = "Vol: [░░░░░░░░░░] " + lipgloss.NewStyle().Foreground(lipgloss.Color(theme.MutedColor)).Bold(true).Render("MUTED 🔇")
 		} else {
 			volText = fmt.Sprintf("Vol: [%s] %d%%", volBar, volume)
 		}
-		
+
 		volVisualWidth := lipgloss.Width(volText)
 		barWidth := m.width - 24 - volVisualWidth
 		if barWidth < 5 {
@@ -1371,11 +1393,11 @@ func (m model) View() string {
 		if filledWidth < 0 {
 			filledWidth = 0
 		}
-		
+
 		barChar := "█"
 		emptyChar := "░"
 		progressBar := strings.Repeat(barChar, filledWidth) + strings.Repeat(emptyChar, barWidth-filledWidth)
-		
+
 		prefix := "▶"
 		if isPaused {
 			prefix = "⏸"
@@ -1463,7 +1485,7 @@ func (m model) renderCategoryLine(idx int, category string) string {
 	if len(lineText) > rightWidth {
 		lineText = lineText[:rightWidth] + "..."
 	}
-	
+
 	if m.focus == "right" && idx == m.rightIdx {
 		return lipgloss.NewStyle().Background(lipgloss.Color(theme.HighlightBG)).Foreground(lipgloss.Color(theme.HighlightFG)).Render(fmt.Sprintf("%-*s", m.width-23, lineText))
 	}
@@ -1703,7 +1725,7 @@ func (m model) getCompactEqualizer() string {
 	m.pm.mu.Lock()
 	isPaused := m.pm.IsPaused || m.pm.mpvCmd == nil
 	m.pm.mu.Unlock()
-	
+
 	var sb strings.Builder
 	for i := 0; i < 6; i++ {
 		sb.WriteString(getEqualizerBar(i, isPaused))
@@ -1746,8 +1768,12 @@ func getDetailedEqualizerRow(rowY int, barHeights []float64) string {
 		} else {
 			fraction := h - float64(rowY)
 			idx := int(fraction * 8)
-			if idx < 0 { idx = 0 }
-			if idx > 7 { idx = 7 }
+			if idx < 0 {
+				idx = 0
+			}
+			if idx > 7 {
+				idx = 7
+			}
 			sb.WriteString(segments[idx] + " ")
 		}
 	}
