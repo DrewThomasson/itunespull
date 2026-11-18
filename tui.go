@@ -20,7 +20,7 @@ const (
 	sidebarPaneWidth    = sidebarContentWidth + 1 // trailing space before the divider
 )
 
-var version = "1.0.1"
+var version = "1.0.2"
 
 type Theme struct {
 	Name           string
@@ -205,7 +205,60 @@ func (m model) Init() tea.Cmd {
 	})
 }
 
+// wheelScrollLines is how many rows one mouse-wheel tick scrolls the list.
+const wheelScrollLines = 3
+
+// listHeight is the number of visible rows in the sidebar/right pane.
+func (m model) listHeight() int {
+	return m.height - 10
+}
+
+// clampScroll keeps rightScrollOffset inside the valid range for the active list.
+func (m *model) clampScroll() {
+	maxOffset := m.getActiveListLength() - m.listHeight()
+	if maxOffset < 0 {
+		maxOffset = 0
+	}
+	if m.rightScrollOffset > maxOffset {
+		m.rightScrollOffset = maxOffset
+	}
+	if m.rightScrollOffset < 0 {
+		m.rightScrollOffset = 0
+	}
+}
+
+// ensureSelectionVisible scrolls the right pane just enough to show rightIdx.
+func (m *model) ensureSelectionVisible() {
+	h := m.listHeight()
+	if h < 1 {
+		return
+	}
+	if m.rightIdx < m.rightScrollOffset {
+		m.rightScrollOffset = m.rightIdx
+	} else if m.rightIdx >= m.rightScrollOffset+h {
+		m.rightScrollOffset = m.rightIdx - h + 1
+	}
+}
+
+// Update wraps update so the scroll position is kept in the model (View has a
+// value receiver, so anything it changes is lost). Keyboard navigation that
+// moves the selection scrolls it into view; mouse-wheel scrolling moves only
+// the viewport and leaves the selection where it is.
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	prevIdx, prevState := m.rightIdx, m.rightPaneState
+	newModel, cmd := m.update(msg)
+	nm, ok := newModel.(model)
+	if !ok {
+		return newModel, cmd
+	}
+	if nm.rightIdx != prevIdx || nm.rightPaneState != prevState {
+		nm.ensureSelectionVisible()
+	}
+	nm.clampScroll()
+	return nm, cmd
+}
+
+func (m model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -288,9 +341,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.lyricsScrollOffset--
 					}
 				} else {
-					if m.rightIdx > 0 {
-						m.rightIdx--
-					}
+					m.rightScrollOffset -= wheelScrollLines
+					m.clampScroll()
 				}
 			}
 			return m, nil
@@ -314,10 +366,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.lyricsScrollOffset++
 					}
 				} else {
-					listLen := m.getActiveListLength()
-					if m.rightIdx < listLen-1 {
-						m.rightIdx++
-					}
+					m.rightScrollOffset += wheelScrollLines
+					m.clampScroll()
 				}
 			}
 			return m, nil
@@ -1004,12 +1054,8 @@ func (m model) View() string {
 		return "Terminal window too small."
 	}
 
-	// Adjust scrolling
-	if m.rightIdx < m.rightScrollOffset {
-		m.rightScrollOffset = m.rightIdx
-	} else if m.rightIdx >= m.rightScrollOffset+listHeight {
-		m.rightScrollOffset = m.rightIdx - listHeight + 1
-	}
+	// Scroll position is maintained in Update; just make sure it is in range.
+	m.clampScroll()
 
 	// 2. Left Sidebar Layout
 	sidebarItems := []string{"📂 Playlists", "👥 Artists", "💿 Albums", "🎵 All Songs", "🔄 Refresh Library"}
